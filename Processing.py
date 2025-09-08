@@ -33,3 +33,4 @@ for fc_name, url in rest_services.items():
     print(f"Saved: {output_fc}")
 
 print("All downloads complete.")
+print("Process Completed.")
