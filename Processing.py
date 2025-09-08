@@ -31,6 +31,3 @@ for fc_name, url in rest_services.items():
     print(f"Downloading {fc_name} from {url}...")
     arcpy.conversion.FeatureClassToFeatureClass(url, gdb_path, fc_name)
     print(f"Saved: {output_fc}")
-
-print("All downloads complete.")
-print("Process Completed.")
