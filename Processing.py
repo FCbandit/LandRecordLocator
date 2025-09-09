@@ -1,6 +1,7 @@
 import arcpy
 import os
 import datetime
+import re
 
 arcpy.env.overwriteOutput = True
 
@@ -133,6 +134,30 @@ def prepLayers():
         field_domain=""
     )
     print("Generated Link field for record of survey layer")
+    arcpy.management.AddField(
+        in_table=os.path.join(gdb_path, "RecordOfSurvey"),
+        field_name="RS_BOOKPAGE",
+        field_type="TEXT",
+        field_precision=None,
+        field_scale=None,
+        field_length=10,
+        field_alias="",
+        field_is_nullable="NULLABLE",
+        field_is_required="NON_REQUIRED",
+        field_domain=""
+    )
+    arcpy.management.AddField(
+        in_table=os.path.join(gdb_path, "RecordOfSurvey"),
+        field_name="RS_STRIP",
+        field_type="TEXT",
+        field_precision=None,
+        field_scale=None,
+        field_length=10,
+        field_alias="",
+        field_is_nullable="NULLABLE",
+        field_is_required="NON_REQUIRED",
+        field_domain=""
+    )
 
 def calcFields():
     #calculate field
@@ -146,21 +171,15 @@ def calcFields():
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
     arcpy.management.CalculateField(
-        in_table=os.path.join(gdb_path,"Parcel_Map"),
+        in_table=os.path.join(gdb_path, "Parcel_Map"),
         field="REF_STRIP",
-        expression="""strip_all(!REFERENCE!)""",
+        expression=r"re.sub(r'(^|\D)0+(?=\d)', r'\1', !REFERENCE!)",
         expression_type="PYTHON3",
-        code_block="""import re
-
-    def strip_all(val):
-        if not val:
-            return val
-        # Convert every run of digits to its int, which drops leading zeros
-        return re.sub(r'\d+', lambda m: str(int(m.group(0))), val)
-    """,
+        code_block="import re",
         field_type="TEXT",
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
+    print("Calculated ref strip field")
     print("Calculated fields for parcel map layer.")
     arcpy.management.CalculateField(
         in_table=os.path.join(gdb_path,"Tract_Map"),
@@ -181,34 +200,21 @@ def calcFields():
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
     arcpy.management.CalculateField(
-        in_table=os.path.join(gdb_path,"Tract_Map"),
+        in_table=os.path.join(gdb_path, "Tract_Map"),
         field="REF_STRIP",
-        expression="""strip_all(!REFERENCE!)""",
+        expression=r"re.sub(r'(^|\D)0+(?=\d)', r'\1', !REFERENCE!)",
         expression_type="PYTHON3",
-        code_block="""import re
-
-    def strip_all(val):
-        if not val:
-            return val
-        # Convert every run of digits to its int, which drops leading zeros
-        return re.sub(r'\d+', lambda m: str(int(m.group(0))), val)
-    """,
+        code_block="import re",
         field_type="TEXT",
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
+
     arcpy.management.CalculateField(
         in_table=os.path.join(gdb_path, "Tract_Map"),
         field="REF_MB_STRIP",
-        expression="""strip_all(!REFERENCE!)""",
+        expression=r"re.sub(r'(^|\D)0+(?=\d)', r'\1', !REFERENCE!)",
         expression_type="PYTHON3",
-        code_block="""import re
-
-        def strip_all(val):
-            if not val:
-                return val
-            # Convert every run of digits to its int, which drops leading zeros
-            return re.sub(r'\d+', lambda m: str(int(m.group(0))), val)
-        """,
+        code_block="import re",
         field_type="TEXT",
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
@@ -230,7 +236,24 @@ def calcFields():
         field_type="TEXT",
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
-
+    arcpy.management.CalculateField(
+        in_table=os.path.join(gdb_path,"RecordOfSurvey"),
+        field="RS_BOOKPAGE",
+        expression='"RS" + !BOOK_PAGE!',
+        expression_type="PYTHON3",
+        code_block="",
+        field_type="TEXT",
+        enforce_domains="NO_ENFORCE_DOMAINS"
+    )
+    arcpy.management.CalculateField(
+        in_table=os.path.join(gdb_path, "RecordOfSurvey"),
+        field="RS_STRIP",
+        expression=r"re.sub(r'(^|\D)0+(?=\d)', r'\1', !RS_BOOKPAGE!)",
+        expression_type="PYTHON3",
+        code_block="import re",
+        field_type="TEXT",
+        enforce_domains="NO_ENFORCE_DOMAINS"
+    )
 if __name__ == "__main__":
     downloadServices()
     prepLayers()
