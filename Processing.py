@@ -2,6 +2,8 @@ import arcpy
 import os
 import datetime
 import re
+from arcgis.gis import GIS
+import zipfile
 
 arcpy.env.overwriteOutput = True
 
@@ -254,7 +256,79 @@ def calcFields():
         field_type="TEXT",
         enforce_domains="NO_ENFORCE_DOMAINS"
     )
+
+def refreshData():
+    Service_item_ID = "e2cbc3428a9e4761915c9a5e3c7eff49"
+
+    GDB_path = r"P:\mppub\MAPSVCS\SPECIAL_PROJECTS\Land_Records_Feature_Locator\downloaded_services\LandRecords.gdb"
+    ZIP_path = r"P:\mppub\MAPSVCS\SPECIAL_PROJECTS\Land_Records_Feature_Locator\downloaded_services\Zipped_Exports\LandRecords.gdb.zip"
+
+    #source layer and agol layer mapping
+    LAYER_MAP = {
+        "RecordOfSurvey": "RecordOfSurvey",
+        "Parcel_Map": "Parcel_Map",
+        "Tract_Map": "Tract_Map"
+    }
+    #Sign into AGOL
+    gis = GIS("home")
+    print("Signed in as:", gis.users.me.username)
+    #Confirm item name
+    svc_item = gis.content.get(Service_item_ID)
+    print("Service:", svc_item.title)
+
+    #Zip up source GDB
+    if os.path.exists(ZIP_path):
+        os.remove(ZIP_path)
+
+    with zipfile.ZipFile(ZIP_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(GDB_path):
+            for f in files:
+                full_path = os.path.join(root, f)
+                arcname = os.path.relpath(full_path, os.path.dirname(GDB_path))
+                zipf.write(full_path, arcname)
+
+    print("Zipped FGDB:", ZIP_path)
+
+    #Upload temp FGDB onto AGOL
+    src_item = gis.content.folders.get().add(
+        item_properties={"title": "LandRecords_fgdb_upload"},
+        data=ZIP_path
+    )
+
+    print("Uploaded source item:", src_item.id)
+
+    #Truncate and append each layer
+    for lyr in svc_item.layers:
+        layer_name = lyr.properties.name
+
+        if layer_name not in LAYER_MAP:
+            print(f"Skipping layer not in map: {layer_name}")
+            continue
+
+        fc_name = LAYER_MAP[layer_name]
+        print(f"\nUpdating layer: {layer_name}")
+
+        #Delete existing features
+        del_result = lyr.delete_features(where="1=1")
+        print("  Deleted features")
+
+        #Append from FGDB
+        append_result = lyr.append(
+            item_id=src_item.id,
+            upload_format="filegdb",
+            source_table_name=fc_name,
+            upsert=False
+        )
+
+        print("  Appended:", append_result)
+
+    #Remove temp source item in AGOL
+    src_item.delete()
+
+    print("Data refresh complete.")
+
 if __name__ == "__main__":
     downloadServices()
     prepLayers()
     calcFields()
+    refreshData()
