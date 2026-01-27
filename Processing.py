@@ -4,6 +4,7 @@ import datetime
 import re
 from arcgis.gis import GIS
 import zipfile
+import gc, time
 
 arcpy.env.overwriteOutput = True
 
@@ -67,13 +68,19 @@ def prepLayers():
         field_is_required="NON_REQUIRED",
         field_domain=""
     )
-    print("Addded REF_STRIP field for parcel map layer")
+    print("Added REF_STRIP field for parcel map layer")
+    #Repair tract map geometry
+    arcpy.management.RepairGeometry(
+        in_features=os.path.join(gdb_path, "Tract_Map"),
+        delete_null="KEEP_NULL",
+        validation_method="ESRI"
+    )
     arcpy.management.DeleteField(
         in_table=os.path.join(gdb_path, "Tract_Map"),
         drop_field="LINK",
         method="DELETE_FIELDS"
     )
-    # make new field with 100 str
+    # make new link field
     arcpy.management.AddField(
         in_table=os.path.join(gdb_path, "Tract_Map"),
         field_name="LINK",
@@ -276,6 +283,11 @@ def refreshData():
     svc_item = gis.content.get(Service_item_ID)
     print("Service:", svc_item.title)
 
+    #Clear any locks
+    arcpy.ClearWorkspaceCache_management()
+    gc.collect()
+    time.sleep(2)
+
     #Zip up source GDB
     if os.path.exists(ZIP_path):
         os.remove(ZIP_path)
@@ -290,10 +302,15 @@ def refreshData():
     print("Zipped FGDB:", ZIP_path)
 
     #Upload temp FGDB onto AGOL
-    src_item = gis.content.folders.get().add(
-        item_properties={"title": "LandRecords_fgdb_upload"},
-        data=ZIP_path
-    )
+    root_folder = gis.content.folders.get()  # root
+
+    src_item = root_folder.add(
+        item_properties={
+            "title": "LandRecords_fgdb_upload",
+            "type": "File Geodatabase"
+        },
+        file=ZIP_path
+    ).result()
 
     print("Uploaded source item:", src_item.id)
 
@@ -319,7 +336,6 @@ def refreshData():
             source_table_name=fc_name,
             upsert=False
         )
-
         print("  Appended:", append_result)
 
     #Remove temp source item in AGOL
@@ -328,7 +344,12 @@ def refreshData():
     print("Data refresh complete.")
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     downloadServices()
     prepLayers()
     calcFields()
     refreshData()
+
+    elapsed = time.time() - start_time
+    print(f"\nTotal runtime: {elapsed / 60:.2f} minutes ({elapsed:.1f} seconds)")
