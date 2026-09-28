@@ -1,0 +1,78 @@
+import arcpy, time, smtplib, traceback
+from datetime import datetime
+arcpy.env.overwriteOutput = True
+
+errorFlag = 0
+ProcessLog = ''
+
+try:
+
+    script_start_time = time.time()
+    ProcessLog += 'Land Record Data Refresh Script Started    : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S") + ' <br>'
+    
+    ProcessLog += 'Copying Land Record Layers                     : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S") + ' <br>'
+    #Script Process
+
+    ProcessLog += 'Preparing Layers                      : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S") + ' <br>'
+    #Script Process
+    
+    ProcessLog += 'Calculating Fields      : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S")
+
+    ProcessLog += 'Refreshing Data      : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S")
+    
+    p_start_time = time.time()
+    #Optional - Script Process with timer
+    time.sleep(10)
+    p_elapsed_time = time.time() - p_start_time
+    ProcessLog += ' (%d minutes %.0f seconds)' % divmod(p_elapsed_time, 60) + '<br>'
+
+
+except Exception:
+    ProcessLog += "^ FAILURE POINT ^ <br><br>"
+    errorFlag = 1
+    errorMsg = traceback.format_exc()
+    print errorMsg
+
+
+if errorFlag == 1:
+    ProcessLog += 'Land Record Data Refresh Script Failed at  : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S") + ' <br> <br>'
+else:
+    ProcessLog += 'Land Record Data Refresh Script Script Completed  : ' + datetime.now().strftime("%Y-%m-%d @ %H:%M.%S") + ' <br> <br>'
+
+elapsed_time = time.time() - script_start_time
+ProcessLog += 'Elapsed Script Time   : %d minutes %.0f seconds' % divmod(elapsed_time, 60) + ' <br> <br>'
+
+
+TO = ["dhan@dpw.lacounty.gov","dvera@dpw.lacounty.gov"]
+FROM = "gis@dpw.lacounty.gov"
+if errorFlag == 1:
+    TO = ["dhan@dpw.lacounty.gov","dvera@dpw.lacounty.gov"]
+    SUBJECT = 'Script Failed!'
+    PostTxt = '<pre><font face="Courier New, Courier, monospace">'
+    PostTxt += '------------------------ERROR MSG------------------------ <br>'
+    PostTxt += errorMsg
+    PostTxt += '<br>'
+    PostTxt += '-----------------------PROCESS LOG----------------------- <br>'
+    PostTxt += ProcessLog
+    PostTxt += '</font></pre>'
+
+else:
+    SUBJECT = 'Script Successfully Completed'
+    PostTxt = '<pre><font face="Courier New, Courier, monospace">'
+    PostTxt += '-----------------------PROCESS LOG----------------------- <br>'
+    PostTxt += ProcessLog
+    PostTxt += '</font></pre>'
+
+BODY =  "\r\n".join((
+        "From: %s" % FROM,
+        "To: %s" % ", ".join(TO),
+        "MIME-Version: 1.0",
+        "Content-type: text/html",
+        "Subject: %s" % SUBJECT ,
+        "",
+        PostTxt
+        ))
+
+server = smtplib.SMTP("mail.co.la.ca.us", "25")
+server.sendmail(FROM, TO, BODY)
+server.quit()
