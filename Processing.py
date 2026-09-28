@@ -325,9 +325,10 @@ def refreshData():
         fc_name = LAYER_MAP[layer_name]
         print(f"\nUpdating layer: {layer_name}")
 
-        #Delete existing features
-        del_result = lyr.delete_features(where="1=1")
-        print("  Deleted features")
+        #Clear existing features (truncate is a bulk operation, faster than
+        #delete_features(where="1=1") since it skips per-feature query/delete)
+        trunc_result = lyr.manager.truncate()
+        print("  Truncated:", trunc_result)
 
         #Append from FGDB
         append_result = lyr.append(
