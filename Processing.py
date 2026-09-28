@@ -265,7 +265,7 @@ def calcFields():
     )
 
 def refreshData():
-    Service_item_ID = "e2cbc3428a9e4761915c9a5e3c7eff49"
+    Service_item_ID = "29b9ab882bea41d7bdd4590eb843f9b2"
 
     GDB_path = r"P:\mppub\MAPSVCS\SPECIAL_PROJECTS\Land_Records_Feature_Locator\downloaded_services\LandRecords.gdb"
     ZIP_path = r"P:\mppub\MAPSVCS\SPECIAL_PROJECTS\Land_Records_Feature_Locator\downloaded_services\Zipped_Exports\LandRecords.gdb.zip"
